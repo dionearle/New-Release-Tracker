@@ -78,7 +78,7 @@ function get_releases(artist) {
 
             let releases = response.getElementsByTagName('release-group');
 
-            for(let i = 0; i < releases.length; i++) {
+            for (let i = 0; i < releases.length; i++) {
 
                 let release = releases[i];
                 let type = release.attributes.type.textContent;
