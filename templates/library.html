@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Your Library</title>
+</head>
+
+<body>
+  {% extends 'base.html' %}
+  {% block content %}
+  <h1>Your Library</h1>
+  <p>View the artists from your library here</p>
+  <div id='artists'></div>
+  <script type="module" src="/static/js/library.js" crossorigin="use-credentials"></script>
+  {% endblock %}
+</body>
+
+</html>
