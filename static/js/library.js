@@ -25,24 +25,63 @@ fetch(url, options)
     .then(response => response.json())
     .then(response => {
 
-        const artists = response.artists;
+        const promisesList = [];
 
-        for (let i = 0; i < artists.artist.length; i++) {
+        const totalPages = response.artists['@attr'].totalPages;
 
-            display_artist(artists.artist[i]);
+        for (let i = 1; i < totalPages; i++) {
+
+            // here we specify the url for the fetch request
+            let url2 = new URL('http://ws.audioscrobbler.com/2.0/');
+
+            // since the API requires url parameters, we set these here
+            let query2 = {
+                method: 'library.getartists',
+                api_key: '3e0c61f86ab0621665f8bb0bccd2eaf9',
+                user: 'dionearle',
+                page: i,
+                format: 'json'
+            };
+
+            // we then add this search query to the url
+            url2.search = new URLSearchParams(query2);
+
+            // here we simply setup the options for the fetch request
+            const options2 = {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+
+            promisesList.push(fetch(url2, options2)
+                .then(response => response.json())
+            );
         }
 
-        //PLACEHOLDER! TESTING WITH ONLY FIRST FEW ARTISTS!
-        // (NOTE ISSUE WHEN TRYING TO FETCH FOR MULTIPLE ARTISTS AT ONCE)
-        get_releases(artists.artist[1].name);
-        /*get_releases(artists.artist[1].name);
-        get_releases(artists.artist[2].name);
-        get_releases(artists.artist[3].name);
-        get_releases(artists.artist[4].name);
-        get_releases(artists.artist[5].name);
-        get_releases(artists.artist[6].name);
-        get_releases(artists.artist[7].name); */
+        Promise.all(promisesList)
+            .then(responses => {
 
+                let databaseArtists = [];
+
+                for (let i = 0; i < responses.length; i++) {
+
+                    const response = responses[i];
+
+                    const artists = response.artists.artist;
+
+                    for (let i = 0; i < artists.length; i++) {
+
+                        const artist = artists[i];
+
+                        display_artist(artist);
+
+                        databaseArtists.push(artist.name);
+                    }
+                }
+
+                recursiveGetReleases(databaseArtists, 0, databaseArtists.length);
+            });
     });
 
 function display_artist(artist) {
@@ -56,15 +95,14 @@ function display_artist(artist) {
     html.appendChild(thisArtist);
 }
 
-// USING MUSICBRAINZ!!!
-function get_releases(artist) {
+function recursiveGetReleases(databaseArtists, i, limit) {
 
     // here we specify the url for the fetch request
     let url = new URL('https://musicbrainz.org/ws/2/artist/');
 
     // since the API requires url parameters, we set these here
     let params = {
-        query: `artist\:\"${artist}\"`,
+        query: `artist\:\"${databaseArtists[i]}\"`,
         fmt: 'json'
     };
 
@@ -79,58 +117,78 @@ function get_releases(artist) {
         }
     }
 
-    // we now fetch the data
-    fetch(url, options)
-        .then(response => response.json())
-        .then(response => {
+    setTimeout(function () {
 
-            // here we extract the artistID from the response
-            let artistID = response.artists[0].id;
+        // we now fetch the data
+        fetch(url, options)
+            .then(response => response.json())
+            .then(response => {
+                if (i < limit) {
 
-            // here we specify the url for the fetch request
-            let url2 = new URL('https://musicbrainz.org/ws/2/release/');
+                    // TODO: Travi$ Scott (index 15)
+                    // gives the following error at line 133:
+                    // TypeError: response.artists[0] is undefined
 
-            // since the API requires url parameters, we set these here
-            let params2 = {
-                artist: `${artistID}`,
-                inc: 'release-groups',
-                limit: '100',
-                fmt: 'json'
-            };
+                    // here we extract the artistID from the response
+                    let artistID = response.artists[0].id;
 
-            // we then add this search query to the url
-            url2.search = new URLSearchParams(params2);
+                    // here we specify the url for the fetch request
+                    let url2 = new URL('https://musicbrainz.org/ws/2/release/');
 
-            // here we simply setup the options for the fetch request
-            const options = {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
+                    // since the API requires url parameters, we set these here
+                    let params2 = {
+                        artist: `${artistID}`,
+                        inc: 'release-groups',
+                        limit: '100',
+                        fmt: 'json'
+                    };
 
-            // we now fetch the data
-            fetch(url2, options)
-                .then(response => response.json())
-                .then(response => {
+                    // we then add this search query to the url
+                    url2.search = new URLSearchParams(params2);
 
-                    let releases = response.releases;
-
-                    for (let i = 0; i < releases.length; i++) {
-
-                        let release = releases[i];
-
-                        let date = release.date;
-                        let title = release.title;
-
-                        let isRecentRelease = checkIsRecentRelease(date);
-
-                        if (isRecentRelease) {
-                            display_release(title, date);
+                    // here we simply setup the options for the fetch request
+                    const options = {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
                         }
                     }
-                });
-        });
+
+                    setTimeout(function () {
+                        // we now fetch the data
+                        fetch(url2, options)
+                            .then(response => response.json())
+                            .then(response => {
+
+                                let releases = response.releases;
+
+                                for (let i = 0; i < releases.length; i++) {
+
+                                    let release = releases[i];
+
+                                    let date = release.date;
+                                    let title = release.title;
+
+                                    if (date !== undefined) {
+                                        let isRecentRelease = checkIsRecentRelease(date);
+
+                                        if (isRecentRelease) {
+                                            display_release(title, date);
+                                        }  
+                                    }
+                                }
+                            });
+                    }, 5000);
+
+                    i++;
+
+                    return recursiveGetReleases(databaseArtists, i, limit);
+               
+                } else {
+                    return;
+                }
+            });
+    }, 5000);
 }
 
 function display_release(title, date) {
@@ -157,7 +215,7 @@ function checkIsRecentRelease(date) {
     let currentDate = new Date();
     let currentMonth = currentDate.getMonth() + 1;
     let currentDay = currentDate.getDate();
-    let currentYear = currentDate.getFullYear();screen
+    let currentYear = currentDate.getFullYear(); screen
 
     // placeholder test to see if release is in current year
     if (currentYear == year) {
@@ -166,41 +224,3 @@ function checkIsRecentRelease(date) {
         return false;
     }
 }
-
-// USING DISCOGS!!! (CAN PROBABLY DELETE SINCE WORKS IN SIMILAR WAY TO
-// MUSICBRAINZ IN THAT IT DOESN'T STORE EXACT DATES FOR ALL RELEASES)
-/*function get_releases(artist) {
-
-    // here we specify the url for the fetch request
-    let url = new URL('https://api.discogs.com/database/search');
-
-    // since the API requires url parameters, we set these here
-    let params = {
-        artist: artist,
-        year: new Date().getFullYear()
-    };
-
-    // we then add this search query to the url
-    url.search = new URLSearchParams(params);
-
-    const options = {
-        method: 'GET',
-        headers: {
-            'Authorization': 'Discogs token=ssgaMRuuruKbkzUQhdsgLDcaJKQaRvDzSeXxqnhi',
-            'Content-Type': 'application/json'
-        }
-    }
-
-    // we now fetch the data
-    fetch(url, options)
-        .then(response => response.json())
-        .then(response => {
-
-            let results = response.results;
-
-            for (let i = 0; i < results.length; i++) {
-
-                display_release(results[i].title);
-            } 
-        });
-}*/
