@@ -74,35 +74,28 @@ fetch(url, options)
 
                         const artist = artists[i];
 
-                        display_artist(artist);
+                        //display_artist(artist);
 
                         databaseArtists.push(artist.name);
                     }
                 }
 
+                // here we display all recent releases for each artist stored
+                // in the database
                 recursiveGetReleases(databaseArtists, 0, databaseArtists.length);
             });
     });
 
-function display_artist(artist) {
-
-    const html = document.getElementById('artists');
-
-    const thisArtist = document.createElement('li');
-    thisArtist.classList.add('artist');
-    thisArtist.textContent = artist.name + ' has been played ' + artist.playcount + ' times.';
-
-    html.appendChild(thisArtist);
-}
-
 function recursiveGetReleases(databaseArtists, i, limit) {
+
+    let currentArtist = databaseArtists[i];
 
     // here we specify the url for the fetch request
     let url = new URL('https://musicbrainz.org/ws/2/artist/');
 
     // since the API requires url parameters, we set these here
     let params = {
-        query: `artist\:\"${databaseArtists[i]}\"`,
+        query: `artist\:\"${currentArtist}\"`,
         fmt: 'json'
     };
 
@@ -125,9 +118,14 @@ function recursiveGetReleases(databaseArtists, i, limit) {
             .then(response => {
                 if (i < limit) {
 
-                    // TODO: Travi$ Scott (index 15)
-                    // gives the following error at line 133:
-                    // TypeError: response.artists[0] is undefined
+                    // if there isn't an artist in the musicbrainz
+                    // database with this name, we go to the next;
+                    if (response.artists[0] === undefined) {
+
+                        i++;
+
+                        return recursiveGetReleases(databaseArtists, i, limit);
+                    }
 
                     // here we extract the artistID from the response
                     let artistID = response.artists[0].id;
@@ -160,6 +158,8 @@ function recursiveGetReleases(databaseArtists, i, limit) {
                             .then(response => response.json())
                             .then(response => {
 
+                                let listTitles = [];
+
                                 let releases = response.releases;
 
                                 for (let i = 0; i < releases.length; i++) {
@@ -169,12 +169,18 @@ function recursiveGetReleases(databaseArtists, i, limit) {
                                     let date = release.date;
                                     let title = release.title;
 
-                                    if (date !== undefined) {
-                                        let isRecentRelease = checkIsRecentRelease(date);
+                                    if (!listTitles.includes(title)) {
 
-                                        if (isRecentRelease) {
-                                            display_release(title, date);
-                                        }  
+                                        listTitles.push(title);
+
+                                        if (date !== undefined) {
+
+                                            let isRecentRelease = checkIsRecentRelease(date);
+
+                                            if (isRecentRelease) {
+                                                display_release(currentArtist, title, date);
+                                            }
+                                        }
                                     }
                                 }
                             });
@@ -183,7 +189,7 @@ function recursiveGetReleases(databaseArtists, i, limit) {
                     i++;
 
                     return recursiveGetReleases(databaseArtists, i, limit);
-               
+
                 } else {
                     return;
                 }
@@ -191,13 +197,13 @@ function recursiveGetReleases(databaseArtists, i, limit) {
     }, 5000);
 }
 
-function display_release(title, date) {
+function display_release(artist, title, date) {
 
     const html = document.getElementById('artists');
 
     const thisRelease = document.createElement('li');
     thisRelease.classList.add('release');
-    thisRelease.textContent = title + ' released on ' + date;
+    thisRelease.textContent = date + ': ' + title + ' by ' + artist + '.';
 
     html.appendChild(thisRelease);
 }
