@@ -1,4 +1,4 @@
-import getArtistIds from './getArtistIds.js';
+import getMissingArtistIds from './getArtistIds.js';
 
 // here we specify the url for the fetch request
 let url = new URL('http://ws.audioscrobbler.com/2.0/');
@@ -34,6 +34,9 @@ fetch(url, options)
         // now we have this, we can retrieve the artists page by page
         const totalPages = response.artists['@attr'].totalPages;
 
+        // TODO: Rather than making another fetch request after getting the total
+        // pages, should probably get artist names and ID for the first page and then
+        // if necessary loop through all remaining pages (e.g. starting from i = 2)
         for (let i = 1; i <= totalPages; i++) {
 
             // since the API requires url parameters, we set these here
@@ -56,7 +59,10 @@ fetch(url, options)
         Promise.all(promisesList)
             .then(responses => {
 
-                let databaseArtists = [];
+                // TODO: Use a data structure that allows name/ID pairs
+                // rather than using two seperate arrays
+                let artistNames = [];
+                let artistIDs = [];
 
                 for (let i = 0; i < responses.length; i++) {
 
@@ -68,12 +74,13 @@ fetch(url, options)
 
                         const artist = artists[i];
 
-                        databaseArtists.push(artist.name);
+                        artistNames.push(artist.name);
+                        artistIDs.push(artist.mbid);
                     }
                 }
 
-                // with this list of artists, we now want
-                // to fetch their musicbrainz ID's
-                getArtistIds(databaseArtists);
+                // with this list of artist names and IDs, we now want
+                // to get any missing IDs using musicbrainz API
+                getMissingArtistIds(artistNames, artistIDs);
             });
     });

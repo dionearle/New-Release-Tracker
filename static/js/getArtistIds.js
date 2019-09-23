@@ -1,28 +1,35 @@
 
 import getAlbumReleases from './getAlbumReleases.js';
 
-export default function getArtistIds(databaseArtists) {
+export default function getMissingArtistIds(artistNames, artistIDs) {
 
-    console.log('Got all artists from last.fm. Now getting musicbrainz id for each...');
+    console.log('Got all artists from last.fm. Now getting any missing IDs from musicbrainz...');
 
-    const databaseIDs = [];
-
-    // TODO: third argument should be databaseArtists.length
-    // (HOWEVER FOR TESTING LEAVING IT AS SMALLER NUMBER)
-    recursiveGetReleases(databaseArtists, 0, 5, databaseIDs);
-
+    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length);
 }
 
-function recursiveGetReleases(databaseArtists, i, limit, databaseIDs) {
+function recursiveGetReleases(artistIDs, artistNames, i, limit) {
 
-    let currentArtist = databaseArtists[i];
+    if (i >= limit) {
+        // once we have retrieved all IDs, we can now look for new releases
+        // for these artists
+        return getAlbumReleases(artistIDs, artistNames);
+    }
+
+    // if we already have the mbid for this artist, we skip it
+    if (artistIDs[i] !== "") {
+        i++;
+        return recursiveGetReleases(artistIDs, artistNames, i, limit);
+    }
+
+    let currentArtistName = artistNames[i];
 
     // here we specify the url for the fetch request
     let url = new URL('https://musicbrainz.org/ws/2/artist/');
 
     // since the API requires url parameters, we set these here
     let params = {
-        query: `artist\:\"${currentArtist}\"`,
+        query: `artist\:\"${currentArtistName}\"`,
         fmt: 'json'
     };
 
@@ -38,34 +45,21 @@ function recursiveGetReleases(databaseArtists, i, limit, databaseIDs) {
     }
 
     setTimeout(function () {
-
-        // we now fetch the data
         fetch(url, options)
             .then(response => response.json())
             .then(response => {
-                if (i < limit) {
 
-                    // if there isn't an artist in the musicbrainz
-                    // database with this name, we go to the next;
-                    if (response.artists[0] === undefined) {
+                // if there is an artist in the musicbrainz
+                // database with this name, we extract their mbid
+                if (response.artists[0] !== undefined) {
 
-                        i++;
-
-                        return recursiveGetReleases(databaseArtists, i, limit, databaseIDs);
-                    }
-
-                    // here we extract the artistID from the response
                     let artistID = response.artists[0].id;
 
-                    databaseIDs.push(artistID);
-
-                    i++;
-
-                    return recursiveGetReleases(databaseArtists, i, limit, databaseIDs);
-
-                } else {
-                    return getAlbumReleases(databaseIDs, databaseArtists);
+                    artistIDs[i] = artistID;
                 }
+
+                i++;
+                return recursiveGetReleases(artistIDs, artistNames, i, limit);
             });
     }, 1000);
 }

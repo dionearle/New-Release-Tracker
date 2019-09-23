@@ -1,31 +1,32 @@
-export default function getAlbumReleases(databaseIDs, databaseArtists) {
+export default function getAlbumReleases(artistIDs, artistNames) {
 
-    console.log('Got all artist ID\'s. Now we would schedule to check for new releases on a Friday...');
+    console.log('Got all artist ID\'s. Now we retrieve all new releases using musicbrainz...');
 
-    // TODO: third argument should be databaseIDs.length
-    // (HOWEVER FOR TESTING LEAVING IT AS SMALLER NUMBER)
-    recursiveGetReleases(databaseIDs, 0, 5, databaseArtists);
+    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, 0);
 
 }
 
-function recursiveGetReleases(databaseIDs, i, limit, databaseArtists) {
+function recursiveGetReleases(artistIDs, artistNames, i, limit, done) {
 
-    // here we extract the artistID from the response
-    let artistID = databaseIDs[i];
+    if (i >= limit) {
+        // once we have displayed all new releases for all artists, we can carry out
+        // any extra functionality in a helper function
+        return doneFunction();
+    }
 
-    let artistName = databaseArtists[i];
+    // here we extract the name and ID for the current artist
+    let artistID = artistIDs[i];
+    let artistName = artistNames[i];
 
     // here we specify the url for the fetch request
-    let url = new URL('https://musicbrainz.org/ws/2/release/');
+    let url = new URL('https://musicbrainz.org/ws/2/release-group/');
 
     // since the API requires url parameters, we set these here
-    // TODO: should work out how many pages and go through all releases
-    // rather than top 100 releases
     let params = {
         artist: `${artistID}`,
-        inc: 'release-groups',
         limit: '100',
-        fmt: 'json'
+        offset: done,
+        fmt: 'json',
     };
 
     // we then add this search query to the url
@@ -40,58 +41,103 @@ function recursiveGetReleases(databaseIDs, i, limit, databaseArtists) {
     }
 
     setTimeout(function () {
-        // we now fetch the data
         fetch(url, options)
             .then(response => response.json())
             .then(response => {
 
-                if (i < limit) {
+                let artistReleases = [];
 
-                    let listTitles = [];
+                let releases = response["release-groups"];
 
-                    let releases = response.releases;
+                for (let i = 0; i < releases.length; i++) {
+                    
+                    let release = releases[i];
 
-                    for (let i = 0; i < releases.length; i++) {
+                    let title = release.title;
 
-                        let release = releases[i];
+                    let date = release["first-release-date"];
 
-                        let date = release.date;
-                        let title = release.title;
+                    let mbid = release.id;
 
-                        if (!listTitles.includes(title)) {
+                    let type = release["primary-type"];
 
-                            listTitles.push(title);
+                    // if we have already looked at a variant of this
+                    // release, then we can simply skip it
+                    if (!artistReleases.includes(title)) {
 
-                            if (date !== undefined) {
+                        artistReleases.push(title);
 
-                                let isRecentRelease = checkIsRecentRelease(date);
+                        if (date !== undefined) {
 
-                                if (isRecentRelease) {
-                                    display_release(artistName, title, date);
-                                }
+                            if (checkIsRecentRelease(date)) {
+                                getAlbumCover(artistName, title, date, type, mbid);
                             }
                         }
                     }
+                }
 
-                    i++;
-                    return recursiveGetReleases(databaseIDs, i, limit, databaseArtists);
-                
+                // if there are still more pages of releases, then we want to keep searching for
+                // this artist
+                let totalReleases = response["release-group-count"];
+                if (done < totalReleases) {
+                    done += 100;
+                    return recursiveGetReleases(artistIDs, artistNames, i, limit, done);
+                    // otherwise, we can move to the next artist
                 } else {
-                    return doneFunction();
+                    i++;
+                    return recursiveGetReleases(artistIDs, artistNames, i, limit, 0);
                 }
             });
     }, 1000);
 }
 
-function display_release(artist, title, date) {
+function getAlbumCover(artist, title, date, type, mbid) {
 
-    const html = document.getElementById('artists');
+    // here we specify the url for the fetch request
+    let url = new URL(`https://coverartarchive.org/release-group/${mbid}`);
 
-    const thisRelease = document.createElement('li');
-    thisRelease.classList.add('release');
-    thisRelease.textContent = date + ': ' + title + ' by ' + artist + '.';
+    // here we simply setup the options for the fetch request
+    const options = {
+        method: 'GET',
+        headers: {
+            'accept': 'application/json'
+        }
+    }
 
-    html.appendChild(thisRelease);
+    fetch(url, options)
+        .then(response => {
+
+            // if a cover art isn't found, an error is thrown
+            if (response.status !== 200) {
+                throw new Error(response.statusText);
+            }
+            return response.json();
+
+        })
+        .then(response => {
+            // TODO: Could use thumbnails to speed up displaying the pictures in browser
+            displayRelease(artist, title, date, type, response.images[0].image);
+        })
+        .catch(function (error) {
+            displayRelease(artist, title, date, type, 'https://orig14.deviantart.net/5162/f/2014/153/9/e/no_album_art__no_cover___placeholder_picture_by_cmdrobot-d7kpm65.jpg');
+        });
+}
+
+function displayRelease(artist, title, date, type, image) {
+
+    const html = document.getElementById('new-releases');
+
+    const release = document.createElement('div');
+    release.classList.add('release');
+    release.textContent = date + ': ' + title + ' (' + type + ') by ' + artist + '.';
+
+    const coverArt = document.createElement('img');
+    coverArt.src = image;
+    coverArt.style.height = '100px';
+    coverArt.style.width = '100px';
+    release.insertBefore(coverArt, release.firstChild);
+
+    html.appendChild(release);
 }
 
 // TODO: return true if date is within last month OR week
@@ -117,12 +163,8 @@ function checkIsRecentRelease(date) {
     }
 }
 
-//TODO: Use the coverart API to get the covers for these releases
-// and display alongside the title, artist and date (links to buy?)
-// https://musicbrainz.org/doc/Cover_Art_Archive/API
-
-// TODO: here we would setup an email to user if necessary, or anything else
-// to do once all new releases have been found
+// helper function to do any tasks once displayed all new
+// releases
 function doneFunction() {
     console.log('Done!');
 }
