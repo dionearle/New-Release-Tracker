@@ -11,8 +11,24 @@
   {% block content %}
   <h1>Your Library</h1>
   <p>View all the new releases from your artists here</p>
+  <div id='searchSettings'>
+    <form name='searchSettings'>
+      <h3>Enter your settings here</h3>
+      last.fm Username:<br>
+      <input type="text" name="username" placeholder="last.fm Username"><br>
+      Number of artists to search:<br>
+      <input type="radio" name="numArtists" value="50">50<br>
+      <input type="radio" name="numArtists" value="100">100<br>
+      <input type="radio" name="numArtists" value="all" checked>All<br>
+      Time period:<br>
+      <input type="radio" name="timePeriod" value="week" checked>Last week<br>
+      <input type="radio" name="timePeriod" value="month">Last month<br>
+      <input type="radio" name="timePeriod" value="year">Last year<br>
+      <input type="submit" value="submit">
+    </form>
+  </div>
   <div id='new-releases'></div>
-  <script type="module" src="/static/js/library.js" crossorigin="use-credentials"></script>
+  <script type="module" src="/static/js/inputDataForm.js" crossorigin="use-credentials"></script>
   {% endblock %}
 </body>
 

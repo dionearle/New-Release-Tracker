@@ -1,25 +1,25 @@
 
 import getAlbumReleases from './getAlbumReleases.js';
 
-export default function getMissingArtistIds(artistNames, artistIDs) {
+export default function getMissingArtistIds(artistNames, artistIDs, timePeriod) {
 
     console.log('Got all artists from last.fm. Now getting any missing IDs from musicbrainz...');
 
-    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length);
+    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, timePeriod);
 }
 
-function recursiveGetReleases(artistIDs, artistNames, i, limit) {
+function recursiveGetReleases(artistIDs, artistNames, i, limit, timePeriod) {
 
     if (i >= limit) {
         // once we have retrieved all IDs, we can now look for new releases
         // for these artists
-        return getAlbumReleases(artistIDs, artistNames);
+        return getAlbumReleases(artistIDs, artistNames, timePeriod);
     }
 
     // if we already have the mbid for this artist, we skip it
     if (artistIDs[i] !== "") {
         i++;
-        return recursiveGetReleases(artistIDs, artistNames, i, limit);
+        return recursiveGetReleases(artistIDs, artistNames, i, limit, timePeriod);
     }
 
     let currentArtistName = artistNames[i];
@@ -59,7 +59,7 @@ function recursiveGetReleases(artistIDs, artistNames, i, limit) {
                 }
 
                 i++;
-                return recursiveGetReleases(artistIDs, artistNames, i, limit);
+                return recursiveGetReleases(artistIDs, artistNames, i, limit, timePeriod);
             });
     }, 1000);
 }

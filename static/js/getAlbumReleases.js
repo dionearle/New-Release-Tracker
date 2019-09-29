@@ -1,12 +1,12 @@
-export default function getAlbumReleases(artistIDs, artistNames) {
+export default function getAlbumReleases(artistIDs, artistNames, timePeriod) {
 
     console.log('Got all artist ID\'s. Now we retrieve all new releases using musicbrainz...');
 
-    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, 0);
+    recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, 0, timePeriod);
 
 }
 
-function recursiveGetReleases(artistIDs, artistNames, i, limit, done) {
+function recursiveGetReleases(artistIDs, artistNames, i, limit, done, timePeriod) {
 
     if (i >= limit) {
         // once we have displayed all new releases for all artists, we can carry out
@@ -49,6 +49,11 @@ function recursiveGetReleases(artistIDs, artistNames, i, limit, done) {
 
                 let releases = response["release-groups"];
 
+                if (releases === undefined) {
+                    i++;
+                    return recursiveGetReleases(artistIDs, artistNames, i, limit, 0, timePeriod);
+                }
+
                 for (let i = 0; i < releases.length; i++) {
                     
                     let release = releases[i];
@@ -69,7 +74,7 @@ function recursiveGetReleases(artistIDs, artistNames, i, limit, done) {
 
                         if (date !== undefined) {
 
-                            if (checkIsRecentRelease(date)) {
+                            if (checkIsRecentRelease(date, timePeriod)) {
                                 getAlbumCover(artistName, title, date, type, mbid);
                             }
                         }
@@ -81,11 +86,11 @@ function recursiveGetReleases(artistIDs, artistNames, i, limit, done) {
                 let totalReleases = response["release-group-count"];
                 if (done < totalReleases) {
                     done += 100;
-                    return recursiveGetReleases(artistIDs, artistNames, i, limit, done);
+                    return recursiveGetReleases(artistIDs, artistNames, i, limit, done, timePeriod);
                     // otherwise, we can move to the next artist
                 } else {
                     i++;
-                    return recursiveGetReleases(artistIDs, artistNames, i, limit, 0);
+                    return recursiveGetReleases(artistIDs, artistNames, i, limit, 0, timePeriod);
                 }
             });
     }, 1000);
@@ -140,9 +145,7 @@ function displayRelease(artist, title, date, type, image) {
     html.appendChild(release);
 }
 
-// TODO: return true if date is within last month OR week
-// otherwise return false
-function checkIsRecentRelease(date) {
+function checkIsRecentRelease(date, timePeriod) {
 
     let dateString = date.split('-');
 
@@ -155,11 +158,22 @@ function checkIsRecentRelease(date) {
     let currentDay = currentDate.getDate();
     let currentYear = currentDate.getFullYear(); screen
 
-    // placeholder test to see if release is in current year
-    if (currentYear == year) {
-        return true;
+    // TODO: Should check if release is within past week, month or year
+    // of current date
+    if (timePeriod === 'week') {
+        console.log('not done yet');
+    } else if (timePeriod === 'month') {
+        if (currentYear == year && currentMonth == month) {
+            return true;
+        } else {
+            return false;
+        }
     } else {
-        return false;
+        if (currentYear == year) {
+            return true;
+        } else {
+            return false;
+        } 
     }
 }
 
