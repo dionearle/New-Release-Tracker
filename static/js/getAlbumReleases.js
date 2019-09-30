@@ -1,12 +1,17 @@
 export default function getAlbumReleases(artistIDs, artistNames, timePeriod) {
 
-    console.log('Got all artist ID\'s. Now we retrieve all new releases using musicbrainz...');
+    const status = document.getElementById('status');
+    status.textContent = 'Got all artist ID\'s. Now we retrieve all new releases using musicbrainz...';
 
     recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, 0, timePeriod);
 
 }
 
 function recursiveGetReleases(artistIDs, artistNames, i, limit, done, timePeriod) {
+
+    const progressBar = document.getElementById('progress');
+    let progress = (i / limit) * 100;
+    progressBar.style.width = progress + '%';
 
     if (i >= limit) {
         // once we have displayed all new releases for all artists, we can carry out
@@ -55,7 +60,7 @@ function recursiveGetReleases(artistIDs, artistNames, i, limit, done, timePeriod
                 }
 
                 for (let i = 0; i < releases.length; i++) {
-                    
+
                     let release = releases[i];
 
                     let title = release.title;
@@ -130,17 +135,21 @@ function getAlbumCover(artist, title, date, type, mbid) {
 
 function displayRelease(artist, title, date, type, image) {
 
-    const html = document.getElementById('new-releases');
+    const html = document.getElementById('display-releases');
 
     const release = document.createElement('div');
-    release.classList.add('release');
-    release.textContent = date + ': ' + title + ' (' + type + ') by ' + artist + '.';
+    release.classList.add('col-3');
+    release.style.align = 'center';
+
+    const releaseText = document.createElement('p');
+    releaseText.textContent = date + ': ' + title + ' (' + type + ') by ' + artist;
+    release.appendChild(releaseText);
 
     const coverArt = document.createElement('img');
     coverArt.src = image;
     coverArt.style.height = '100px';
     coverArt.style.width = '100px';
-    release.insertBefore(coverArt, release.firstChild);
+    release.insertBefore(coverArt, releaseText);
 
     html.appendChild(release);
 }
@@ -161,7 +170,7 @@ function checkIsRecentRelease(date, timePeriod) {
     // TODO: Should check if release is within past week, month or year
     // of current date
     if (timePeriod === 'week') {
-        console.log('not done yet');
+
     } else if (timePeriod === 'month') {
         if (currentYear == year && currentMonth == month) {
             return true;
@@ -173,12 +182,13 @@ function checkIsRecentRelease(date, timePeriod) {
             return true;
         } else {
             return false;
-        } 
+        }
     }
 }
 
 // helper function to do any tasks once displayed all new
 // releases
 function doneFunction() {
-    console.log('Done!');
+    const progressBar = document.getElementById('progress');
+    progressBar.textContent = 'Finished!';
 }

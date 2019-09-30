@@ -3,12 +3,21 @@ import getAlbumReleases from './getAlbumReleases.js';
 
 export default function getMissingArtistIds(artistNames, artistIDs, timePeriod) {
 
-    console.log('Got all artists from last.fm. Now getting any missing IDs from musicbrainz...');
+    const status = document.getElementById('status');
+    status.textContent = 'Got all artists from last.fm. Now getting any missing IDs from musicbrainz...';
+
+    const progress = document.getElementById('outer-progress');
+    progress.style.visibility = 'visible';
 
     recursiveGetReleases(artistIDs, artistNames, 0, artistIDs.length, timePeriod);
 }
 
 function recursiveGetReleases(artistIDs, artistNames, i, limit, timePeriod) {
+
+    const progressBar = document.getElementById('progress');
+    let progress = (i / limit) * 100;
+    progressBar.style.width = progress + '%';
+    progressBar.style.visibility = 'visible';
 
     if (i >= limit) {
         // once we have retrieved all IDs, we can now look for new releases
