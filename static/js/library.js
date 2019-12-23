@@ -1,6 +1,7 @@
 import getMissingArtistIds from './getArtistIds.js';
+import searchDeezerArtists from './searchDeezerArtists.js';
 
-export default function getLibraryArtists(username, numArtists, timePeriod) {
+export default function getLibraryArtists(username, numArtists, timePeriod, searchType) {
 
     // here we specify the url for the fetch request
     let url = new URL('http://ws.audioscrobbler.com/2.0/');
@@ -88,9 +89,15 @@ export default function getLibraryArtists(username, numArtists, timePeriod) {
                         }
                     }
 
-                    // with this list of artist names and IDs, we now want
-                    // to get any missing IDs using musicbrainz API
-                    getMissingArtistIds(artistNames, artistIDs, timePeriod);
+                    // we now use either the musicbainz API or the deezer API to continue
+                    if (searchType === 'deezer') {
+                        // we only need the artist names if we are using deezer
+                        searchDeezerArtists(artistNames,timePeriod)
+                    } else {
+                        // with this list of artist names and IDs, we now want
+                        // to get any missing IDs using musicbrainz API
+                        getMissingArtistIds(artistNames, artistIDs, timePeriod);
+                    }
                 });
         });
 }

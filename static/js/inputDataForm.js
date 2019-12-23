@@ -20,6 +20,9 @@ function handleInputForm() {
     const username = searchSettings.elements.username.value;
     const numArtists = searchSettings.elements.numArtists.value;
     const timePeriod = searchSettings.elements.timePeriod.value;
+    const searchType = searchSettings.elements.searchType.value;
+
+    // TODO: allow users to specify type of releases to be shown (singles, EP's, albums etc.)
 
     // TODO: need to check if last fm username actually exists
     if (username === '') {
@@ -29,6 +32,7 @@ function handleInputForm() {
         const searchSettingsHTML = document.getElementById('searchSettings');
         searchSettingsHTML.parentNode.removeChild(searchSettingsHTML);
 
-        getLibraryArtists(username, numArtists, timePeriod);
+        
+        getLibraryArtists(username, numArtists, timePeriod, searchType);
     }    
 }
